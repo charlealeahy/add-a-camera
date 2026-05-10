@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add a Webcam — EarthLive.TV</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:     #e53e3e;
+      --dark:    #0f0f0f;
+      --surface: #ffffff;
+      --border:  #e2e2e2;
+      --muted:   #888;
+      --text:    #1a1a1a;
+      --label:   #444;
+      --serif:   'Playfair Display', Georgia, serif;
+      --sans:    'DM Sans', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 80px 24px 90px;
+      text-align: center;
+      overflow: hidden;
+      background:
+        linear-gradient(to bottom, rgba(10,10,10,0.82) 0%, rgba(10,10,10,0.92) 100%),
+        url('https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Whole_world_-_land_and_oceans_12000.jpg/1280px-Whole_world_-_land_and_oceans_12000.jpg') center/cover no-repeat;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: linear-gradient(to bottom, transparent, #ffffff);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--red);
+      font-family: var(--sans);
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(30px, 5vw, 52px);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: rgba(255,255,255,0.6);
+      max-width: 480px;
+      margin: 0 auto 24px;
+      font-weight: 300;
+      line-height: 1.7;
+    }
+
+    .trust-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      font-family: var(--sans);
+      letter-spacing: 0.04em;
+    }
+
+    .trust-bar .dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: inline-block;
+    }
+
+    /* ── STEPS TIMELINE ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-top: 36px;
+      flex-wrap: wrap;
+      row-gap: 12px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-pill {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 100px;
+      padding: 7px 16px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      font-family: var(--sans);
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    .step-pill strong {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .step-arrow {
+      font-size: 14px;
+      color: rgba(255,255,255,0.2);
+      padding: 0 4px;
+    }
+
+    /* ── INFO BLOCK ── */
+    .info-block {
+      background: #f7f7f7;
+      border-left: 3px solid var(--red);
+      border-radius: 0 6px 6px 0;
+      padding: 20px 24px;
+      margin-bottom: 40px;
+    }
+
+    .info-block h4 {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--label);
+      margin-bottom: 12px;
+      font-family: var(--sans);
+    }
+
+    .info-block ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-block ul li {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.6;
+      padding-left: 16px;
+      position: relative;
+      font-weight: 300;
+    }
+
+    .info-block ul li::before {
+      content: '-';
+      position: absolute;
+      left: 0;
+      color: var(--red);
+      font-weight: 500;
+    }
+
+    /* ── FORM WRAPPER ── */
+    .form-outer {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 52px 24px 80px;
+    }
+
+    /* ── SECTION ── */
+    .form-section {
+      margin-bottom: 52px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    .form-section:nth-child(1) { animation-delay: 0.05s; }
+    .form-section:nth-child(2) { animation-delay: 0.15s; }
+    .form-section:nth-child(3) { animation-delay: 0.25s; }
+    .form-section:nth-child(4) { animation-delay: 0.35s; }
+    .form-section:nth-child(5) { animation-delay: 0.45s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--dark);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: var(--sans);
+    }
+
+    .section-title {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── FIELDS ── */
+    .field {
+      margin-bottom: 24px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--label);
+      margin-bottom: 7px;
+      letter-spacing: 0.01em;
+    }
+
+    .field label .req {
+      color: var(--red);
+      margin-left: 2px;
+    }
+
+    .field .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 5px;
+      font-weight: 300;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="url"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      appearance: none;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(229,62,62,0.08);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 130px;
+      line-height: 1.6;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .field-row { grid-template-columns: 1fr; }
+      .stream-toggle { grid-template-columns: 1fr; }
+      .desc-options { grid-template-columns: 1fr; }
+      .category-grid { grid-template-columns: 1fr 1fr; }
+      .steps { gap: 6px; }
+      .step-arrow { display: none; }
+    }
+
+    /* ── STREAM TYPE TOGGLE ── */
+    .stream-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stream-option {
+      position: relative;
+    }
+
+    .stream-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .stream-option label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 20px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      text-align: center;
+      font-size: 13px !important;
+      font-weight: 500 !important;
+      color: var(--muted) !important;
+      margin: 0 !important;
+    }
+
+    .stream-option label .icon {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .stream-option label .sub {
+      font-size: 11px;
+      font-weight: 300 !important;
+      color: #aaa !important;
+      margin-top: 2px;
+    }
+
+    .stream-option input:checked + label {
+      border-color: var(--red);
+      background: rgba(229,62,62,0.04);
+      color: var(--text) !important;
+    }
+
+    .stream-option input:checked + label .sub {
+      color: var(--muted) !important;
+    }
+
+    /* stream url panels */
+    .stream-panel { display: none; }
+    .stream-panel.active { display: block; }
+
+    /* ── DESCRIPTION RADIO ── */
+    .desc-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: stretch;
+    }
+
+    .desc-option {
+      position: relative;
+      display: flex;
+    }
+
+    .desc-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .desc-option label {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 16px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      color: var(--text) !important;
+      margin: 0 !important;
+      line-height: 1.4;
+    }
+
+    .desc-option label small {
+      font-size: 12px !important;
+      font-weight: 300 !important;
+      color: #999 !important;
+      line-height: 1.5;
+    }
+
+    .desc-option input:checked + label {
+      border-color: var(--red);
+      background: rgba(229,62,62,0.04);
+    }
+
+    .desc-textarea { display: none; }
+    .desc-textarea.active { display: block; }
+
+    /* ── CATEGORY CHECKBOXES ── */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 8px;
+    }
+
+    .cat-item {
+      position: relative;
+    }
+
+    .cat-item input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .cat-item label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px !important;
+      font-weight: 400 !important;
+      color: var(--label) !important;
+      margin: 0 !important;
+      transition: border-color 0.2s, background 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cat-item input:checked + label {
+      border-color: var(--red);
+      background: rgba(229,62,62,0.04);
+      color: var(--text) !important;
+    }
+
+    .cat-item input:disabled + label {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* ── MAP WRAP ── */
+    .map-wrap {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+
+    .map-instruction {
+      background: #f8f8f8;
+      padding: 10px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── BACKLINK RADIO ── */
+    .backlink-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .backlink-item {
+      position: relative;
+    }
+
+    .backlink-item input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .backlink-item label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+      color: var(--label) !important;
+      margin: 0 !important;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .backlink-item label::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .backlink-item input:checked + label {
+      border-color: var(--red);
+      background: rgba(229,62,62,0.04);
+      color: var(--text) !important;
+    }
+
+    .backlink-item input:checked + label::before {
+      border-color: var(--red);
+      background: var(--red);
+      box-shadow: inset 0 0 0 3px #fff;
+    }
+
+    /* ── CHECKBOX CONFIRM ── */
+    .confirm-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 20px;
+      background: #f9f9f9;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .confirm-check input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      accent-color: var(--red);
+      cursor: pointer;
+    }
+
+    .confirm-check label {
+      font-size: 13px;
+      color: var(--label);
+      line-height: 1.6;
+      cursor: pointer;
+    }
+
+    /* ── SUBMIT ── */
+    .submit-wrap {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .submit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 16px 48px;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .submit-btn:hover {
+      background: #c53030;
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:active { transform: translateY(0); }
+
+    .submit-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 14px;
+      font-weight: 300;
+    }
+
+    /* ── SUCCESS ── */
+    .success-msg {
+      display: none;
+      text-align: center;
+      padding: 60px 40px;
+    }
+
+    .success-msg.visible { display: block; }
+
+    .success-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+
+    .success-msg h2 {
+      font-family: var(--serif);
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .success-msg p {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 300;
+    }
+
+    /* ── DIVIDER ── */
+    .field-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 28px 0;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Add Your Webcam</h1>
+  <p>Be seen by thousands of daily visitors!<br>100% Free. 100% Forever.</p>
+  <div class="trust-bar">
+    <span>1,000+ cameras listed</span>
+    <span class="dot"></span>
+    <span>100+ countries</span>
+    <span class="dot"></span>
+    <span>Reviewed within 48 hours</span>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-pill"><strong>1.</strong> Submit your camera</div>
+    </div>
+    <div class="step-arrow">→</div>
+    <div class="step">
+      <div class="step-pill"><strong>2.</strong> We review within 48hrs</div>
+    </div>
+    <div class="step-arrow">→</div>
+    <div class="step">
+      <div class="step-pill"><strong>3.</strong> You get an email</div>
+    </div>
+    <div class="step-arrow">→</div>
+    <div class="step">
+      <div class="step-pill"><strong>4.</strong> Camera goes live</div>
+    </div>
+  </div>
+</div>
+
+<!-- FORM -->
+<div class="form-outer">
+  <form id="camForm" novalidate>
+
+    <!-- INFO BLOCK -->
+    <div class="info-block">
+      <h4>Before you submit</h4>
+      <ul>
+        <li>Your stream must be genuinely live - not refreshing images or recordings.</li>
+        <li>If your stream is offline for 14+ days, your listing will be auto removed. You can resubmit at any time.</li>
+        <li>YouTube streams: our systems will automatically detect if your stream ever restarts and add it to your listing.</li>
+        <li>HLS streams: providing you push to the same URL, your listing stays live automatically.</li>
+      </ul>
+    </div>
+
+    <!-- ── SECTION 1: CAMERA DETAILS ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-number">1</div>
+        <div class="section-title">Your Camera Details</div>
+      </div>
+
+      <div class="field">
+        <label>Stream Type <span class="req">*</span></label>
+        <div class="stream-toggle">
+          <div class="stream-option">
+            <input type="radio" name="stream_type" id="type_youtube" value="youtube" checked>
+            <label for="type_youtube">
+              <span class="icon">
+                <svg height="22" viewBox="0 0 24 24" fill="#FF0000" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </span>
+              YouTube Live
+              <span class="sub">Paste your YouTube live stream URL</span>
+            </label>
+          </div>
+          <div class="stream-option">
+            <input type="radio" name="stream_type" id="type_hls" value="hls">
+            <label for="type_hls">
+              <span class="icon">
+                <svg height="22" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 0 1 7.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 0 1 1.06 0Z"/>
+                </svg>
+              </span>
+              Direct HLS Stream
+              <span class="sub">You have an .m3u8 stream URL</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- YouTube panel -->
+        <div class="stream-panel active" id="panel_youtube">
+          <input type="url" id="youtube_url_input" name="youtube_url" placeholder="https://www.youtube.com/watch?v=...">
+          <p class="hint"><span style="color:var(--red);font-weight:500;">*</span> <strong>Must be a 24/7 live stream</strong> - live recordings will be rejected.</p>
+        </div>
+
+        <!-- HLS panel -->
+        <div class="stream-panel" id="panel_hls">
+          <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(229,62,62,0.05);border:1.5px solid rgba(229,62,62,0.2);border-radius:6px;padding:12px 16px;margin-bottom:12px;">
+            <span style="color:var(--red);font-size:16px;line-height:1.4;flex-shrink:0;">⚠</span>
+            <p style="font-size:13px;color:#c53030;line-height:1.6;margin:0;">Your stream must be publicly accessible. If your stream uses authentication or has CORS restrictions, please whitelist https://earthlive.tv or disable access controls before submitting — otherwise your camera will show as offline.</p>
+          </div>
+          <input type="url" id="hls_url_input" name="m3u8_url" placeholder="https://example.com/stream/playlist.m3u8">
+          <p class="hint"><span style="color:var(--red);font-weight:500;">*</span> <strong>Must be a 24/7 live stream</strong> - the URL must start with https://</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Suggested Camera Name <span class="req">*</span></label>
+        <input type="text" name="cam_name" placeholder="e.g. Times Square New York, Mount Everest Base Camp, Bondi Beach Sydney">
+      </div>
+
+    </div>
+
+    <!-- ── SECTION 2: LOCATION ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-number">2</div>
+        <div class="section-title">Camera Location</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Country <span class="req">*</span></label>
+          <input type="text" name="country" placeholder="e.g. Italy">
+        </div>
+        <div class="field">
+          <label>City / Town <span class="req">*</span></label>
+          <input type="text" name="city" placeholder="e.g. Levanto">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Listing Address</label>
+        <input type="text" name="address" placeholder="e.g. Abbey Road, St John's Wood, London, UK">
+        <p class="hint">This is the address shown on your listing page. When clicked, it takes visitors to your location on our live webcam map.</p>
+      </div>
+
+      <div class="field">
+        <label>Pin Your Camera on the Map <span class="req">*</span></label>
+        <div class="map-wrap">
+          <div id="map" style="height:320px;width:100%;"></div>
+          <div class="map-instruction">
+            📍 Click anywhere on the map to drop a pin. Zoom in for accuracy.
+          </div>
+        </div>
+        <div class="coords-display" id="coordsDisplay" style="font-size:12px;color:var(--muted);margin-top:8px;font-family:monospace;min-height:18px;">No pin placed yet</div>
+        <input type="hidden" name="lat" id="hiddenLat">
+        <input type="hidden" name="lng" id="hiddenLng">
+        <div style="display:flex;gap:12px;margin-top:12px;">
+          <div style="flex:1;">
+            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block;">Latitude (or enter manually)</label>
+            <input type="text" id="manualLat" placeholder="e.g. 44.16808" style="font-family:monospace;font-size:13px;" oninput="updateFromManual()">
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px;color:var(--muted);margin-bottom:4px;display:block;">Longitude (or enter manually)</label>
+            <input type="text" id="manualLng" placeholder="e.g. 9.61048" style="font-family:monospace;font-size:13px;" oninput="updateFromManual()">
+          </div>
+        </div>
+        <p class="hint" style="margin-top:8px;">Not sure of your coordinates? Search your location on <a href="https://www.latlong.net" target="_blank" style="color:var(--red);">latlong.net</a> and paste them above.</p>
+      </div>
+
+    </div>
+
+    <!-- ── SECTION 3: ABOUT THE CAMERA ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-number">3</div>
+        <div class="section-title">About Your Camera</div>
+      </div>
+
+      <div class="field">
+        <label>Camera Description (200–300 words) <span class="req">*</span></label>
+        <div class="desc-options">
+          <div class="desc-option">
+            <input type="radio" name="desc_choice" id="desc_us" value="write_us" checked>
+            <label for="desc_us">
+              ✍️ Let EarthLive.TV write it...
+              <small>We'll write an SEO-optimised description based on your location.</small>
+            </label>
+          </div>
+          <div class="desc-option">
+            <input type="radio" name="desc_choice" id="desc_them" value="write_them">
+            <label for="desc_them">
+              📝 I'll write my own...
+              <small>Tell visitors what they're seeing and why it's special.</small>
+            </label>
+          </div>
+        </div>
+        <div class="desc-textarea" id="descTextarea">
+          <textarea id="descriptionInput" name="description" placeholder="Describe what your camera shows. What can visitors see? What makes this location special?" rows="8" maxlength="2000"></textarea>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <p class="hint">Good descriptions help your listing rank in search results.</p>
+            <span id="wordCount" style="font-size:12px;color:var(--muted);font-family:monospace;white-space:nowrap;">0 / 300 words</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-divider"></div>
+
+      <div class="field">
+        <label>Category <span class="req">*</span> <span style="font-weight:300;color:var(--muted);">— select max 5</span></label>
+        <div class="category-grid">
+          <div class="cat-item"><input type="checkbox" id="cat_airports" name="categories" value="Airports"><label for="cat_airports">✈️ Airports</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_animals" name="categories" value="Animals"><label for="cat_animals">🐾 Animals</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_bars" name="categories" value="Bars and Restaurants"><label for="cat_bars">🍷 Bars &amp; Restaurants</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_beaches" name="categories" value="Beaches"><label for="cat_beaches">🏖️ Beaches</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_bridges" name="categories" value="Bridges"><label for="cat_bridges">🌉 Bridges</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_businesses" name="categories" value="Businesses"><label for="cat_businesses">🏢 Businesses</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_busy" name="categories" value="Busy Places"><label for="cat_busy">👥 Busy Places</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_castles" name="categories" value="Castles and Palaces"><label for="cat_castles">🏰 Castles &amp; Palaces</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_chill" name="categories" value="Chill Feeds"><label for="cat_chill">😌 Chill Feeds</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_cities" name="categories" value="Cities"><label for="cat_cities">🏙️ Cities</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_construction" name="categories" value="Construction Sites"><label for="cat_construction">🏗️ Construction Sites</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_harbours" name="categories" value="Harbours and Marinas"><label for="cat_harbours">⚓ Harbours &amp; Marinas</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_hotels" name="categories" value="Hotels and Resorts"><label for="cat_hotels">🏨 Hotels &amp; Resorts</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_kids" name="categories" value="Kids Corner"><label for="cat_kids">🧒 Kids Corner</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_mountains" name="categories" value="Mountains"><label for="cat_mountains">⛰️ Mountains</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_museums" name="categories" value="Museums and Statues"><label for="cat_museums">🏛️ Museums &amp; Statues</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_nature" name="categories" value="Nature"><label for="cat_nature">🌿 Nature</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_oceans" name="categories" value="Oceans and Lakes"><label for="cat_oceans">🌊 Oceans &amp; Lakes</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_parks" name="categories" value="Parks and Recreation"><label for="cat_parks">🌳 Parks &amp; Recreation</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_worship" name="categories" value="Places of Worship"><label for="cat_worship">⛪ Places of Worship</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_squares" name="categories" value="Public Squares"><label for="cat_squares">🏟️ Public Squares</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_remote" name="categories" value="Remote Locations"><label for="cat_remote">🗺️ Remote Locations</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_scenic" name="categories" value="Scenic Views"><label for="cat_scenic">🌄 Scenic Views</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_ski" name="categories" value="Ski and Snow"><label for="cat_ski">⛷️ Ski &amp; Snow</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_space" name="categories" value="Space and Astronomy"><label for="cat_space">🔭 Space &amp; Astronomy</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_tourist" name="categories" value="Tourist Attractions"><label for="cat_tourist">🗽 Tourist Attractions</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_traffic" name="categories" value="Traffic Cameras"><label for="cat_traffic">🚦 Traffic Cameras</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_trains" name="categories" value="Trains"><label for="cat_trains">🚂 Trains</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_unesco" name="categories" value="UNESCO Sites"><label for="cat_unesco">🏅 UNESCO Sites</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_volcanoes" name="categories" value="Volcanoes"><label for="cat_volcanoes">🌋 Volcanoes</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_waterfalls" name="categories" value="Waterfalls"><label for="cat_waterfalls">💧 Waterfalls</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_weather" name="categories" value="Weather"><label for="cat_weather">⛅ Weather</label></div>
+          <div class="cat-item"><input type="checkbox" id="cat_wildlife" name="categories" value="Wildlife"><label for="cat_wildlife">🦁 Wildlife</label></div>
+        </div>
+        <p class="hint" id="catHint" style="margin-top:10px;">Select up to 5 categories.</p>
+      </div>
+
+    </div>
+
+    <!-- ── SECTION 4: YOUR WEBSITE & BACKLINK ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-number">4</div>
+        <div class="section-title">Your Website</div>
+      </div>
+
+      <div class="field">
+        <label>Your Website URL</label>
+        <input type="url" name="website_url" placeholder="https://www.yourwebsite.com">
+        <p class="hint">We'll link to this from your camera page — free publicity for you.</p>
+      </div>
+
+      <div class="field">
+        <label>Preferred Anchor Text for Your Link</label>
+        <input type="text" name="anchor_text" placeholder="e.g. Levanto Beach Hotel, Visit Levanto">
+        <p class="hint">The clickable text we'll use when linking to your site. Leave blank and we'll use your site name.</p>
+      </div>
+
+      <div class="field-divider"></div>
+
+      <div class="field">
+        <label>Link Exchange</label>
+        <p class="hint" style="margin-bottom:16px;">Your live webcam listing is 100% free. We'll add a link to your website from your camera page. In return, we'd love a link back anywhere from your site - thank you so, so much! Here are two easy options:</p>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+
+          <div style="background:#f7f7f7;border:1.5px solid var(--border);border-radius:8px;padding:18px 20px;">
+            <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Option 1 — Copy the HTML code</p>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Paste this anywhere on your website:</p>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <code style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:#333;font-family:monospace;">&lt;a href="https://earthlive.tv"&gt;Live Webcams&lt;/a&gt;</code>
+              <button type="button" onclick="copyHTML(this)" style="font-family:var(--sans);font-size:12px;padding:10px 16px;background:var(--dark);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">Copy</button>
+            </div>
+          </div>
+
+          <div style="background:#f7f7f7;border:1.5px solid var(--border);border-radius:8px;padding:18px 20px;">
+            <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Option 2 — Copy the anchor text</p>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Link text: <strong>Live Webcams</strong> — pointing to:</p>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <code style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:#333;font-family:monospace;">https://earthlive.tv</code>
+              <button type="button" onclick="copyURL(this)" style="font-family:var(--sans);font-size:12px;padding:10px 16px;background:var(--dark);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;">Copy</button>
+            </div>
+          </div>
+
+        </div>
+        <p class="hint" style="margin-top:12px;">Completely optional — but genuinely appreciated.</p>
+      </div>
+
+    </div>
+
+    <!-- ── SECTION 5: CONTACT & CONFIRM ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <div class="section-number">5</div>
+        <div class="section-title">Contact & Submit</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Your Name <span class="req">*</span></label>
+          <input type="text" name="contact_name" placeholder="First and last name">
+        </div>
+        <div class="field">
+          <label>Email Address <span class="req">*</span></label>
+          <input type="email" name="contact_email" placeholder="you@yourwebsite.com">
+          <p class="hint">We'll email you when your camera goes live. No spam, ever.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Additional Comments</label>
+        <textarea name="additional_comments" placeholder="Anything else you'd like to add..." rows="4"></textarea>
+      </div>
+
+      <div class="field">
+        <div class="confirm-check">
+          <input type="checkbox" id="confirm_rights" name="confirm_rights" required>
+          <label for="confirm_rights">I confirm that I own or have permission to share this stream publicly, and that submitting it to EarthLive.TV does not violate any third-party rights.</label>
+        </div>
+      </div>
+
+      <div class="submit-wrap">
+        <button type="submit" class="submit-btn">
+          Submit Camera →
+        </button>
+        <p class="submit-note">We review all submissions before publishing. Usually within 48 hours.</p>
+      </div>
+
+    </div>
+
+  </form>
+
+  <!-- SUCCESS STATE -->
+  <div class="success-msg" id="successMsg">
+    <div class="success-icon">🌍</div>
+    <h2>Camera Submitted!</h2>
+    <p>We'll review your submission and email you within 48 hours when it goes live.</p>
+  </div>
+
+</div>
+
+<script>
+
+  // ── MAP ──────────────────────────────────────────────────────────────────────
+  function initMap() {
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
+
+    let marker = null;
+    const redIcon = L.divIcon({
+      className: '',
+      html: '<div style="width:14px;height:14px;background:#e53e3e;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      if (marker) marker.setLatLng(e.latlng);
+      else marker = L.marker(e.latlng, { icon: redIcon }).addTo(map);
+      document.getElementById('hiddenLat').value = lat.toFixed(6);
+      document.getElementById('hiddenLng').value = lng.toFixed(6);
+      document.getElementById('manualLat').value = lat.toFixed(6);
+      document.getElementById('manualLng').value = lng.toFixed(6);
+      document.getElementById('coordsDisplay').innerHTML =
+        '📍 Pin placed: <strong>' + lat.toFixed(5) + '°, ' + lng.toFixed(5) + '°</strong>';
+    });
+
+    window._map = map;
+    window._redIcon = redIcon;
+    window._mapMarker = null;
+  }
+
+  function updateFromManual() {
+    const lat = parseFloat(document.getElementById('manualLat').value);
+    const lng = parseFloat(document.getElementById('manualLng').value);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      document.getElementById('hiddenLat').value = lat.toFixed(6);
+      document.getElementById('hiddenLng').value = lng.toFixed(6);
+      document.getElementById('coordsDisplay').innerHTML =
+        '📍 Pin placed: <strong>' + lat.toFixed(5) + '°, ' + lng.toFixed(5) + '°</strong>';
+      if (window._map) {
+        if (window._mapMarker) window._mapMarker.setLatLng([lat, lng]);
+        else window._mapMarker = L.marker([lat, lng], { icon: window._redIcon }).addTo(window._map);
+        window._map.setView([lat, lng], 10);
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof L !== 'undefined') initMap();
+
+  // ── STREAM TYPE TOGGLE ───────────────────────────────────────────────────────
+  document.querySelectorAll('input[name="stream_type"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      const val = document.querySelector('input[name="stream_type"]:checked').value;
+      const ytPanel  = document.getElementById('panel_youtube');
+      const hlsPanel = document.getElementById('panel_hls');
+      ytPanel.classList.remove('active');
+      hlsPanel.classList.remove('active');
+      if (val === 'youtube') ytPanel.classList.add('active');
+      if (val === 'hls')     hlsPanel.classList.add('active');
+    });
+  });
+
+  // ── DESCRIPTION TOGGLE ───────────────────────────────────────────────────────
+  document.querySelectorAll('input[name="desc_choice"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.getElementById('descTextarea').classList.toggle('active', radio.value === 'write_them' && radio.checked);
+    });
+  });
+
+  // ── WORD COUNTER ─────────────────────────────────────────────────────────────
+  const descInput = document.getElementById('descriptionInput');
+  const wordCount = document.getElementById('wordCount');
+  if (descInput) {
+    descInput.addEventListener('input', () => {
+      const words = descInput.value.trim() === '' ? 0 : descInput.value.trim().split(/\s+/).length;
+      wordCount.textContent = `${words} / 300 words`;
+      wordCount.style.color = words > 300 ? '#e53e3e' : 'var(--muted)';
+    });
+  }
+
+  // ── CATEGORY MAX 5 ───────────────────────────────────────────────────────────
+  const catBoxes = document.querySelectorAll('input[name="categories"]');
+  catBoxes.forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = document.querySelectorAll('input[name="categories"]:checked');
+      const hint = document.getElementById('catHint');
+      if (checked.length >= 5) {
+        catBoxes.forEach(b => { if (!b.checked) b.disabled = true; });
+        hint.textContent = '5 categories selected — maximum reached.';
+        hint.style.color = 'var(--red)';
+      } else {
+        catBoxes.forEach(b => b.disabled = false);
+        hint.textContent = 'Select up to 5 categories.';
+        hint.style.color = 'var(--muted)';
+      }
+    });
+  });
+
+  // ── FORM SUBMIT ──────────────────────────────────────────────────────────────
+  document.getElementById('camForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('camForm').style.display = 'none';
+    document.getElementById('successMsg').classList.add('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  }); // end DOMContentLoaded
+
+  // ── COPY FUNCTIONS ───────────────────────────────────────────────────────────
+  function copyHTML(btn) {
+    navigator.clipboard.writeText('<a href="https://earthlive.tv">Live Webcams</a>').then(() => {
+      btn.textContent = 'Copied!'; btn.style.background = '#48bb78';
+      setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = 'var(--dark)'; }, 2000);
+    });
+  }
+  function copyURL(btn) {
+    navigator.clipboard.writeText('https://earthlive.tv').then(() => {
+      btn.textContent = 'Copied!'; btn.style.background = '#48bb78';
+      setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = 'var(--dark)'; }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
